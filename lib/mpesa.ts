@@ -1,17 +1,16 @@
-// lib/mpesa.ts
-// Lipana M-Pesa STK Push Integration
+// lib/mpesa.ts — Lipana M-Pesa STK Push Integration
 // Docs: https://developer.safaricom.co.ke/Documentation
 
-const MPESA_BASE_URL =
-  process.env.MPESA_ENVIRONMENT === 'production'
+function getMpesaBaseUrl() {
+  return process.env.MPESA_ENVIRONMENT === 'production'
     ? 'https://api.safaricom.co.ke'
     : 'https://sandbox.safaricom.co.ke'
+}
 
-const CONSUMER_KEY = process.env.MPESA_CONSUMER_KEY || ''
-const CONSUMER_SECRET = process.env.MPESA_CONSUMER_SECRET || ''
-const SHORTCODE = process.env.MPESA_SHORTCODE || '174379'
-const PASSKEY = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
-const CALLBACK_URL = process.env.MPESA_CALLBACK_URL || 'https://example.com/api/payments/callback'
+function isMockMode() {
+  const key = process.env.MPESA_CONSUMER_KEY || ''
+  return !key || key === 'your-mpesa-consumer-key'
+}
 
 export interface StkPushResponse {
   MerchantRequestID: string
@@ -27,67 +26,49 @@ export interface StkCallbackData {
   ResultCode: number
   ResultDesc: string
   CallbackMetadata?: {
-    Item: Array<{
-      Name: string
-      Value?: string | number
-    }>
+    Item: Array<{ Name: string; Value?: string | number }>
   }
 }
 
 async function getAccessToken(): Promise<string> {
-  // If in mock mode (no real credentials), return mock token
-  if (!CONSUMER_KEY || CONSUMER_KEY === 'your-mpesa-consumer-key') {
-    return 'mock-access-token'
-  }
+  if (isMockMode()) return 'mock-access-token'
 
-  const credentials = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64')
+  const key = process.env.MPESA_CONSUMER_KEY!
+  const secret = process.env.MPESA_CONSUMER_SECRET!
+  const credentials = Buffer.from(`${key}:${secret}`).toString('base64')
 
   const response = await fetch(
-    `${MPESA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Basic ${credentials}`,
-      },
-    }
+    `${getMpesaBaseUrl()}/oauth/v1/generate?grant_type=client_credentials`,
+    { method: 'GET', headers: { Authorization: `Basic ${credentials}` } }
   )
-
-  if (!response.ok) {
-    throw new Error(`Failed to get M-Pesa access token: ${response.statusText}`)
-  }
-
+  if (!response.ok) throw new Error(`M-Pesa token error: ${response.statusText}`)
   const data = await response.json()
   return data.access_token
 }
 
 function getTimestamp(): string {
   const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const hour = String(now.getHours()).padStart(2, '0')
-  const minute = String(now.getMinutes()).padStart(2, '0')
-  const second = String(now.getSeconds()).padStart(2, '0')
-  return `${year}${month}${day}${hour}${minute}${second}`
+  return [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+    String(now.getHours()).padStart(2, '0'),
+    String(now.getMinutes()).padStart(2, '0'),
+    String(now.getSeconds()).padStart(2, '0'),
+  ].join('')
 }
 
 function getPassword(timestamp: string): string {
-  const data = `${SHORTCODE}${PASSKEY}${timestamp}`
-  return Buffer.from(data).toString('base64')
+  const shortcode = process.env.MPESA_SHORTCODE || '174379'
+  const passkey = process.env.MPESA_PASSKEY ||
+    'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
+  return Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64')
 }
 
 function formatPhone(phone: string): string {
-  // Convert 07XX or 01XX to 254XXXXXXXXX
   const cleaned = phone.replace(/\D/g, '')
-  if (cleaned.startsWith('0')) {
-    return `254${cleaned.substring(1)}`
-  }
-  if (cleaned.startsWith('254')) {
-    return cleaned
-  }
-  if (cleaned.startsWith('+254')) {
-    return cleaned.substring(1)
-  }
+  if (cleaned.startsWith('0')) return `254${cleaned.substring(1)}`
+  if (cleaned.startsWith('+')) return cleaned.substring(1)
   return cleaned
 }
 
@@ -95,14 +76,13 @@ export async function initiateSTKPush(
   phone: string,
   amount: number,
   accountReference: string,
-  transactionDesc: string = 'EduFund Application Fee'
+  transactionDesc = 'EduFund Application Fee'
 ): Promise<StkPushResponse> {
-  // Mock mode — return simulated response if no real credentials
-  if (!CONSUMER_KEY || CONSUMER_KEY === 'your-mpesa-consumer-key') {
-    console.log('🔧 M-Pesa MOCK mode — simulating STK push')
+  if (isMockMode()) {
+    console.log('🔧 M-Pesa MOCK mode — simulating STK push for:', phone)
     return {
-      MerchantRequestID: `MOCK-MERCHANT-${Date.now()}`,
-      CheckoutRequestID: `MOCK-CHECKOUT-${Date.now()}`,
+      MerchantRequestID: `MOCK-MR-${Date.now()}`,
+      CheckoutRequestID: `MOCK-CR-${Date.now()}`,
       ResponseCode: '0',
       ResponseDescription: 'Success. Request accepted for processing',
       CustomerMessage: 'Success. Request accepted for processing',
@@ -111,77 +91,73 @@ export async function initiateSTKPush(
 
   const accessToken = await getAccessToken()
   const timestamp = getTimestamp()
-  const password = getPassword(timestamp)
-  const formattedPhone = formatPhone(phone)
+  const shortcode = process.env.MPESA_SHORTCODE || '174379'
+  const callbackUrl = process.env.MPESA_CALLBACK_URL || ''
 
   const payload = {
-    BusinessShortCode: SHORTCODE,
-    Password: password,
+    BusinessShortCode: shortcode,
+    Password: getPassword(timestamp),
     Timestamp: timestamp,
     TransactionType: 'CustomerPayBillOnline',
     Amount: Math.ceil(amount),
-    PartyA: formattedPhone,
-    PartyB: SHORTCODE,
-    PhoneNumber: formattedPhone,
-    CallBackURL: CALLBACK_URL,
+    PartyA: formatPhone(phone),
+    PartyB: shortcode,
+    PhoneNumber: formatPhone(phone),
+    CallBackURL: callbackUrl,
     AccountReference: accountReference,
     TransactionDesc: transactionDesc,
   }
 
-  const response = await fetch(`${MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
+  const response = await fetch(
+    `${getMpesaBaseUrl()}/mpesa/stkpush/v1/processrequest`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    }
+  )
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.errorMessage || 'STK Push failed')
+    const err = await response.json()
+    throw new Error(err.errorMessage || 'STK Push failed')
   }
-
   return response.json()
 }
 
-export async function querySTKStatus(checkoutRequestId: string): Promise<{
-  ResultCode: string
-  ResultDesc: string
-}> {
-  // Mock mode
-  if (!CONSUMER_KEY || CONSUMER_KEY === 'your-mpesa-consumer-key') {
+export async function querySTKStatus(checkoutRequestId: string) {
+  if (isMockMode()) {
     return { ResultCode: '0', ResultDesc: 'The service request is processed successfully.' }
   }
 
   const accessToken = await getAccessToken()
   const timestamp = getTimestamp()
-  const password = getPassword(timestamp)
+  const shortcode = process.env.MPESA_SHORTCODE || '174379'
 
-  const payload = {
-    BusinessShortCode: SHORTCODE,
-    Password: password,
-    Timestamp: timestamp,
-    CheckoutRequestID: checkoutRequestId,
-  }
-
-  const response = await fetch(`${MPESA_BASE_URL}/mpesa/stkpushquery/v1/query`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  })
-
+  const response = await fetch(
+    `${getMpesaBaseUrl()}/mpesa/stkpushquery/v1/query`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        BusinessShortCode: shortcode,
+        Password: getPassword(timestamp),
+        Timestamp: timestamp,
+        CheckoutRequestID: checkoutRequestId,
+      }),
+    }
+  )
   return response.json()
 }
 
 export function parseCallbackData(callbackData: StkCallbackData) {
-  const metadata = callbackData.CallbackMetadata?.Item || []
-
-  const get = (name: string) =>
-    metadata.find((item) => item.Name === name)?.Value
+  const items = callbackData.CallbackMetadata?.Item || []
+  const get = (name: string) => items.find(i => i.Name === name)?.Value
 
   return {
     resultCode: callbackData.ResultCode,
