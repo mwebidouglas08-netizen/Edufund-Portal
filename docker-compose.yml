@@ -1,0 +1,46 @@
+version: '3.8'
+
+# EduFund Portal — Docker Compose (Local Development)
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: edufund_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edufund
+      POSTGRES_PASSWORD: edufund_pass
+      POSTGRES_DB: edufund_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edufund -d edufund_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edufund_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://edufund:edufund_pass@postgres:5432/edufund_db
+      JWT_SECRET: change-this-in-production-at-least-32-chars
+      JWT_EXPIRES_IN: 7d
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      MPESA_ENVIRONMENT: sandbox
+      APPLICATION_FEE: 500
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/app/public/uploads
+
+volumes:
+  postgres_data:
+  uploads:
