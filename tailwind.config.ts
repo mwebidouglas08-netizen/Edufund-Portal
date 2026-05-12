@@ -15,8 +15,7 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-geist-mono)', 'monospace'],
+        sans: ['var(--font-jakarta)', 'system-ui', 'sans-serif'],
         display: ['var(--font-playfair)', 'Georgia', 'serif'],
       },
       colors: {
@@ -53,7 +52,6 @@ const config: Config = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // EduFund brand colors
         brand: {
           50:  '#eef6ff',
           100: '#d9eaff',
@@ -66,17 +64,6 @@ const config: Config = {
           800: '#1637b6',
           900: '#183390',
           950: '#121f57',
-        },
-        emerald: {
-          50:  '#ecfdf5',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-        },
-        amber: {
-          50:  '#fffbeb',
-          500: '#f59e0b',
-          600: '#d97706',
         },
       },
       borderRadius: {
@@ -97,10 +84,6 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(10px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
-        'slide-in': {
-          from: { transform: 'translateX(-100%)' },
-          to: { transform: 'translateX(0)' },
-        },
         shimmer: {
           from: { backgroundPosition: '-200% 0' },
           to: { backgroundPosition: '200% 0' },
@@ -108,13 +91,6 @@ const config: Config = {
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' },
-        },
-        pulse: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '.5' },
-        },
-        'border-beam': {
-          '100%': { 'offset-distance': '100%' },
         },
         'magic-spin': {
           from: { transform: 'rotate(0deg)' },
@@ -129,10 +105,8 @@ const config: Config = {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'fade-in': 'fade-in 0.5s ease-out',
-        'slide-in': 'slide-in 0.3s ease-out',
         shimmer: 'shimmer 2s infinite linear',
         float: 'float 3s ease-in-out infinite',
-        'border-beam': 'border-beam calc(var(--duration)*1s) infinite linear',
         'magic-spin': 'magic-spin 3s linear infinite',
         marquee: 'marquee var(--duration) infinite linear',
       },
