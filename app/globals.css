@@ -2,8 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -26,8 +24,6 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 224 91% 48%;
     --radius: 0.625rem;
-    --font-geist-sans: 'Plus Jakarta Sans', sans-serif;
-    --font-playfair: 'Playfair Display', serif;
   }
 
   .dark {
@@ -57,45 +53,22 @@
   * { @apply border-border; }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-feature-settings: "cv11", "ss01";
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
-  h1, h2, h3 { font-feature-settings: "cv11", "ss01"; }
 }
 
 @layer components {
-  /* === Shimmer animation === */
   .shimmer {
     background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      rgba(255, 255, 255, 0) 100%
+      rgba(255,255,255,0) 0%,
+      rgba(255,255,255,0.4) 50%,
+      rgba(255,255,255,0) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
 
-  /* === Magic border beam === */
-  .border-beam {
-    position: relative;
-    overflow: hidden;
-  }
-  .border-beam::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 2px;
-    background: linear-gradient(90deg, #3378ff, #8b5cf6, #ec4899, #3378ff);
-    background-size: 300% 100%;
-    animation: shimmer 3s linear infinite;
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-  }
-
-  /* === Gradient text === */
   .gradient-text {
     background: linear-gradient(135deg, #1342e1 0%, #7c3aed 50%, #2563eb 100%);
     -webkit-background-clip: text;
@@ -103,40 +76,32 @@
     background-clip: text;
   }
 
-  /* === Glass effect === */
   .glass {
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255,255,255,0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255,255,255,0.3);
   }
 
   .glass-dark {
-    background: rgba(15, 23, 42, 0.7);
+    background: rgba(15,23,42,0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255,255,255,0.05);
   }
 
-  /* === Number input hide spinners === */
   input[type="number"]::-webkit-inner-spin-button,
   input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
 
-  /* === Status badges === */
-  .status-draft { @apply bg-gray-100 text-gray-700 border border-gray-200; }
-  .status-submitted { @apply bg-blue-50 text-blue-700 border border-blue-200; }
+  .status-draft        { @apply bg-gray-100 text-gray-700 border border-gray-200; }
+  .status-submitted    { @apply bg-blue-50 text-blue-700 border border-blue-200; }
   .status-under_review { @apply bg-amber-50 text-amber-700 border border-amber-200; }
-  .status-approved { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
-  .status-rejected { @apply bg-red-50 text-red-700 border border-red-200; }
-  .status-disbursed { @apply bg-purple-50 text-purple-700 border border-purple-200; }
-
-  /* === Step form === */
-  .step-active { @apply bg-brand-600 text-white; }
-  .step-complete { @apply bg-emerald-500 text-white; }
-  .step-pending { @apply bg-gray-100 text-gray-400; }
+  .status-approved     { @apply bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .status-rejected     { @apply bg-red-50 text-red-700 border border-red-200; }
+  .status-disbursed    { @apply bg-purple-50 text-purple-700 border border-purple-200; }
 }
 
 /* Scrollbar */
@@ -148,22 +113,16 @@
 /* Animations */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeInLeft {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
-.animate-fade-in-left { animation: fadeInLeft 0.5s ease-out forwards; }
-.animate-scale-in { animation: scaleIn 0.3s ease-out forwards; }
+.animate-scale-in   { animation: scaleIn 0.3s ease-out forwards; }
 
-/* Staggered animations */
 .stagger-1 { animation-delay: 0.1s; }
 .stagger-2 { animation-delay: 0.2s; }
 .stagger-3 { animation-delay: 0.3s; }
