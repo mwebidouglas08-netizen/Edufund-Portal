@@ -1,8 +1,7 @@
-// lib/auth.ts
+// lib/auth.ts — JWT utilities + auth helpers for API routes (Node.js runtime only)
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import { NextRequest } from 'next/server'
-import { db } from './db'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
@@ -29,18 +28,20 @@ export function verifyToken(token: string): JWTPayload {
   return jwt.verify(token, JWT_SECRET) as JWTPayload
 }
 
-export async function getAuthUser(req: NextRequest) {
+function extractToken(req: NextRequest): string | null {
   const authHeader = req.headers.get('authorization')
-  const cookieToken = req.cookies.get('auth_token')?.value
+  if (authHeader?.startsWith('Bearer ')) return authHeader.substring(7)
+  return req.cookies.get('auth_token')?.value || null
+}
 
-  const token = authHeader?.startsWith('Bearer ')
-    ? authHeader.substring(7)
-    : cookieToken
-
+export async function getAuthUser(req: NextRequest) {
+  const token = extractToken(req)
   if (!token) return null
 
   try {
     const payload = verifyToken(token)
+    // Lazy import db to keep this file edge-safe at module scope
+    const { db } = await import('./db')
     const user = await db.user.findUnique({
       where: { id: payload.userId },
       select: {
@@ -54,7 +55,6 @@ export async function getAuthUser(req: NextRequest) {
         createdAt: true,
       },
     })
-
     if (!user || !user.isActive) return null
     return user
   } catch {
@@ -64,9 +64,7 @@ export async function getAuthUser(req: NextRequest) {
 
 export async function requireAuth(req: NextRequest) {
   const user = await getAuthUser(req)
-  if (!user) {
-    return { user: null, error: 'Unauthorized' }
-  }
+  if (!user) return { user: null, error: 'Unauthorized' }
   return { user, error: null }
 }
 
