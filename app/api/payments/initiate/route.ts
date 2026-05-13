@@ -17,12 +17,13 @@ export async function POST(req: NextRequest) {
 
     const result = paymentSchema.safeParse(body)
     if (!result.success) {
-      return apiError(result.error.flatten().fieldErrors.phone?.[0] || 'Invalid phone number')
+      return apiError(
+        result.error.flatten().fieldErrors.phone?.[0] || 'Invalid phone number'
+      )
     }
 
     const { phone, applicationId } = result.data
 
-    // Verify application belongs to user
     const application = await db.application.findUnique({
       where: { id: applicationId },
       select: { id: true, userId: true, referenceNo: true, status: true },
@@ -31,16 +32,11 @@ export async function POST(req: NextRequest) {
     if (!application) return apiError('Application not found', 404)
     if (application.userId !== user.id) return apiError('Forbidden', 403)
 
-    // Check if already paid
-    const existingPayment = await db.payment.findUnique({
-      where: { applicationId },
-    })
-
+    const existingPayment = await db.payment.findUnique({ where: { applicationId } })
     if (existingPayment?.status === 'SUCCESS') {
       return apiError('This application already has a successful payment', 409)
     }
 
-    // Initiate STK Push
     const stkResponse = await initiateSTKPush(
       phone,
       APPLICATION_FEE,
@@ -52,7 +48,10 @@ export async function POST(req: NextRequest) {
       return apiError(`M-Pesa error: ${stkResponse.ResponseDescription}`)
     }
 
-    // Create or update payment record
+    const isMock =
+      !process.env.MPESA_CONSUMER_KEY ||
+      process.env.MPESA_CONSUMER_KEY === 'your-mpesa-consumer-key'
+
     const payment = await db.payment.upsert({
       where: { applicationId },
       create: {
@@ -75,12 +74,15 @@ export async function POST(req: NextRequest) {
     })
 
     return apiSuccess({
-      payment: { id: payment.id, status: payment.status, checkoutRequestId: payment.checkoutRequestId },
+      payment: {
+        id: payment.id,
+        status: payment.status,
+        checkoutRequestId: payment.checkoutRequestId,
+      },
       message: `An M-Pesa prompt has been sent to ${phone}. Enter your PIN to complete.`,
-      isMock: !process.env.MPESA_CONSUMER_KEY || process.env.MPESA_CONSUMER_KEY === 'your-mpesa-consumer-key',
+      isMock,
     })
-  } catch (err: unknown) {
-    console.error('Payment initiate error:', err)
+  } catch (err) {
     const message = err instanceof Error ? err.message : 'Payment initiation failed'
     return apiError(message, 500)
   }
