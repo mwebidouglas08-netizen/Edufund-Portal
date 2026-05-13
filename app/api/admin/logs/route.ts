@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 import { apiError, apiSuccess } from '@/lib/utils'
+import { Prisma } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { user, error } = await requireAdmin(req)
@@ -14,19 +15,21 @@ export async function GET(req: NextRequest) {
   const search = searchParams.get('search')
   const skip = (page - 1) * limit
 
-  const where = search ? {
-    OR: [
-      { action: { contains: search, mode: 'insensitive' as const } },
-      { entity: { contains: search, mode: 'insensitive' as const } },
-      { admin: { fullName: { contains: search, mode: 'insensitive' as const } } },
-    ]
-  } : {}
+  const where: Prisma.AuditLogWhereInput = search
+    ? {
+        OR: [
+          { action: { contains: search, mode: 'insensitive' as const } },
+          { entity: { contains: search, mode: 'insensitive' as const } },
+          { admin: { fullName: { contains: search, mode: 'insensitive' as const } } },
+        ],
+      }
+    : {}
 
   const [logs, total] = await Promise.all([
     db.auditLog.findMany({
       where,
       include: { admin: { select: { fullName: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as const },
       skip,
       take: limit,
     }),
