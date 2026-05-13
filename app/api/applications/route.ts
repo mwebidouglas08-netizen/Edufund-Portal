@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiError, apiSuccess, generateReferenceNo } from '@/lib/utils'
 import { sendApplicationStatusEmail } from '@/lib/email'
+import { ApplicationStatus, Gender, InstitutionType, Prisma } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { user, error } = await requireAuth(req)
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '10')
   const skip = (page - 1) * limit
 
-  const where = user.role === 'ADMIN' ? {} : { userId: user.id }
+  const where: Prisma.ApplicationWhereInput =
+    user.role === 'ADMIN' ? {} : { userId: user.id }
 
   const [applications, total] = await Promise.all([
     db.application.findMany({
@@ -23,9 +25,9 @@ export async function GET(req: NextRequest) {
         user: { select: { fullName: true, email: true, phone: true } },
         payment: { select: { status: true, mpesaReceiptNo: true, amount: true } },
         documents: { select: { id: true, documentType: true, fileName: true } },
-        statusLogs: { orderBy: { createdAt: 'desc' }, take: 5 },
+        statusLogs: { orderBy: { createdAt: 'desc' as const }, take: 5 },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as const },
       skip,
       take: limit,
     }),
@@ -42,7 +44,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    // Check if user already has a DRAFT or SUBMITTED application
     const existing = await db.application.findFirst({
       where: {
         userId: user.id,
@@ -60,39 +61,35 @@ export async function POST(req: NextRequest) {
       data: {
         userId: user.id,
         referenceNo,
-        status: 'DRAFT',
-        // Step 1
-        fullName: body.fullName,
-        idNumber: body.idNumber,
+        status: 'DRAFT' as ApplicationStatus,
+        fullName: String(body.fullName),
+        idNumber: String(body.idNumber),
         dateOfBirth: new Date(body.dateOfBirth),
-        gender: body.gender,
-        phone: body.phone,
-        email: body.email,
-        county: body.county,
-        constituency: body.constituency,
-        hasDisability: body.hasDisability || false,
-        disabilityNotes: body.disabilityNotes,
-        // Step 2
-        guardianName: body.guardianName,
-        guardianOccupation: body.guardianOccupation,
-        householdIncome: body.householdIncome,
-        dependents: body.dependents,
-        isOrphan: body.isOrphan || false,
-        orphanStatus: body.orphanStatus,
-        // Step 3
-        institutionType: body.institutionType,
-        institutionName: body.institutionName,
-        institutionId: body.institutionId,
-        admissionNumber: body.admissionNumber,
-        course: body.course,
-        yearOfStudy: body.yearOfStudy,
-        totalFees: body.totalFees,
-        // Step 4
-        feesRequired: body.feesRequired,
-        amountRequested: body.amountRequested,
-        otherFunding: body.otherFunding || 0,
-        otherFundingSource: body.otherFundingSource,
-        personalStatement: body.personalStatement,
+        gender: body.gender as Gender,
+        phone: String(body.phone),
+        email: String(body.email),
+        county: String(body.county),
+        constituency: body.constituency ? String(body.constituency) : null,
+        hasDisability: Boolean(body.hasDisability),
+        disabilityNotes: body.disabilityNotes ? String(body.disabilityNotes) : null,
+        guardianName: String(body.guardianName),
+        guardianOccupation: String(body.guardianOccupation),
+        householdIncome: Number(body.householdIncome),
+        dependents: Number(body.dependents),
+        isOrphan: Boolean(body.isOrphan),
+        orphanStatus: body.orphanStatus ? String(body.orphanStatus) : null,
+        institutionType: body.institutionType as InstitutionType,
+        institutionName: String(body.institutionName),
+        institutionId: body.institutionId ? String(body.institutionId) : null,
+        admissionNumber: String(body.admissionNumber),
+        course: String(body.course),
+        yearOfStudy: Number(body.yearOfStudy),
+        totalFees: body.totalFees ? Number(body.totalFees) : null,
+        feesRequired: Number(body.feesRequired),
+        amountRequested: Number(body.amountRequested),
+        otherFunding: Number(body.otherFunding || 0),
+        otherFundingSource: body.otherFundingSource ? String(body.otherFundingSource) : null,
+        personalStatement: String(body.personalStatement),
       },
     })
 
@@ -109,7 +106,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { applicationId, ...updateData } = body
+    const { applicationId, status } = body
 
     const application = await db.application.findUnique({
       where: { id: applicationId },
@@ -126,15 +123,14 @@ export async function PATCH(req: NextRequest) {
 
     const updated = await db.application.update({
       where: { id: applicationId },
-      data: updateData,
+      data: { status: status as ApplicationStatus },
     })
 
-    // If status changed to SUBMITTED
-    if (updateData.status === 'SUBMITTED' && application.status !== 'SUBMITTED') {
+    if (status === 'SUBMITTED' && application.status !== 'SUBMITTED') {
       await db.statusLog.create({
         data: {
           applicationId,
-          status: 'SUBMITTED',
+          status: 'SUBMITTED' as ApplicationStatus,
           changedBy: user.id,
           comment: 'Application submitted by student',
         },
