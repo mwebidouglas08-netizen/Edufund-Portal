@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { requireAdmin } from '@/lib/auth'
 import { apiError, apiSuccess } from '@/lib/utils'
 import { institutionSchema } from '@/lib/validations'
+import { InstitutionType } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -14,13 +15,13 @@ export async function GET(req: NextRequest) {
   const institutions = await db.institution.findMany({
     where: {
       isActive: true,
-      ...(type && { type: type as never }),
-      ...(county && { county: { contains: county, mode: 'insensitive' } }),
+      ...(type && { type: type as InstitutionType }),
+      ...(county && { county: { contains: county, mode: 'insensitive' as const } }),
       ...(search && {
         OR: [
-          { name: { contains: search, mode: 'insensitive' } },
-          { county: { contains: search, mode: 'insensitive' } },
-          { code: { contains: search, mode: 'insensitive' } },
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { county: { contains: search, mode: 'insensitive' as const } },
+          { code: { contains: search, mode: 'insensitive' as const } },
         ],
       }),
     },
@@ -51,11 +52,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
   const { id, ...data } = body
 
-  const institution = await db.institution.update({
-    where: { id },
-    data,
-  })
-
+  const institution = await db.institution.update({ where: { id }, data })
   return apiSuccess({ institution })
 }
 
