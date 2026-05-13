@@ -84,7 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
             >
-              <item.icon className={cn('w-4.5 h-4.5 flex-shrink-0', active ? 'text-white' : 'text-gray-400 group-hover:text-gray-600')} />
+              <item.icon className={cn('w-[18px] h-[18px] flex-shrink-0', active ? 'text-white' : 'text-gray-400 group-hover:text-gray-600')} />
               <span>{item.label}</span>
               {item.label === 'Notifications' && (user?.unreadNotifications || 0) > 0 && (
                 <span className={cn('ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold', active ? 'bg-white/20 text-white' : 'bg-red-500 text-white')}>
@@ -100,14 +100,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Footer */}
       <div className="px-3 py-4 border-t border-gray-100 space-y-1">
         <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all group">
-          <User className="w-4.5 h-4.5 text-gray-400 group-hover:text-gray-600" />
+          <User className="w-[18px] h-[18px] text-gray-400 group-hover:text-gray-600" />
           Profile Settings
         </Link>
         <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-all group"
         >
-          <LogOut className="w-4.5 h-4.5" />
+          <LogOut className="w-[18px] h-[18px]" />
           Sign Out
         </button>
       </div>
