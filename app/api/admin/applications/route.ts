@@ -5,6 +5,8 @@ import { requireAdmin } from '@/lib/auth'
 import { apiError, apiSuccess } from '@/lib/utils'
 import { adminCommentSchema } from '@/lib/validations'
 import { sendApplicationStatusEmail } from '@/lib/email'
+import { ApplicationStatus, InstitutionType } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { user, error } = await requireAdmin(req)
@@ -13,14 +15,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '20')
-  const status = searchParams.get('status')
-  const institutionType = searchParams.get('institutionType')
+  const status = searchParams.get('status') as ApplicationStatus | null
+  const institutionType = searchParams.get('institutionType') as InstitutionType | null
   const search = searchParams.get('search')
   const dateFrom = searchParams.get('dateFrom')
   const dateTo = searchParams.get('dateTo')
   const skip = (page - 1) * limit
 
-  const where: Record<string, unknown> = {}
+  const where: Prisma.ApplicationWhereInput = {}
   if (status) where.status = status
   if (institutionType) where.institutionType = institutionType
   if (dateFrom || dateTo) {
@@ -31,10 +33,10 @@ export async function GET(req: NextRequest) {
   }
   if (search) {
     where.OR = [
-      { fullName: { contains: search, mode: 'insensitive' } },
-      { email: { contains: search, mode: 'insensitive' } },
-      { referenceNo: { contains: search, mode: 'insensitive' } },
-      { institutionName: { contains: search, mode: 'insensitive' } },
+      { fullName: { contains: search, mode: 'insensitive' as const } },
+      { email: { contains: search, mode: 'insensitive' as const } },
+      { referenceNo: { contains: search, mode: 'insensitive' as const } },
+      { institutionName: { contains: search, mode: 'insensitive' as const } },
     ]
   }
 
@@ -45,9 +47,9 @@ export async function GET(req: NextRequest) {
         user: { select: { fullName: true, email: true, phone: true } },
         payment: { select: { status: true, mpesaReceiptNo: true, amount: true, createdAt: true } },
         documents: { select: { id: true, documentType: true, fileName: true, filePath: true } },
-        statusLogs: { orderBy: { createdAt: 'asc' } },
+        statusLogs: { orderBy: { createdAt: 'asc' as const } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as const },
       skip,
       take: limit,
     }),
@@ -78,8 +80,8 @@ export async function PATCH(req: NextRequest) {
 
   if (!application) return apiError('Application not found', 404)
 
-  const updateData: Record<string, unknown> = {
-    status,
+  const updateData: Prisma.ApplicationUpdateInput = {
+    status: status as ApplicationStatus,
     adminComment: comment,
     reviewedBy: user.id,
     reviewedAt: new Date(),
@@ -96,7 +98,7 @@ export async function PATCH(req: NextRequest) {
   await db.statusLog.create({
     data: {
       applicationId,
-      status: status as never,
+      status: status as ApplicationStatus,
       changedBy: user.id,
       comment,
     },
@@ -117,7 +119,12 @@ export async function PATCH(req: NextRequest) {
       userId: application.userId,
       title: `Application ${status.replace('_', ' ')}`,
       message: comment,
-      type: status === 'APPROVED' || status === 'DISBURSED' ? 'success' : status === 'REJECTED' ? 'error' : 'info',
+      type:
+        status === 'APPROVED' || status === 'DISBURSED'
+          ? 'success'
+          : status === 'REJECTED'
+          ? 'error'
+          : 'info',
     },
   })
 
