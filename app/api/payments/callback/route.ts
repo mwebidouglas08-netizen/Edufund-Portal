@@ -16,15 +16,15 @@ export async function POST(req: NextRequest) {
 
     const parsed = parseCallbackData(callbackData)
 
-    // Find payment by checkout request ID
+    // Find payment by checkout request ID — single application include with nested user
     const payment = await db.payment.findFirst({
       where: { checkoutRequestId: parsed.checkoutRequestId },
       include: {
         application: {
-          select: { id: true, referenceNo: true, userId: true },
-        },
-        application: {
-          include: {
+          select: {
+            id: true,
+            referenceNo: true,
+            userId: true,
             user: { select: { email: true, fullName: true } },
           },
         },
@@ -43,7 +43,9 @@ export async function POST(req: NextRequest) {
         data: {
           status: 'SUCCESS',
           mpesaReceiptNo: parsed.mpesaReceiptNo,
-          transactionDate: parsed.transactionDate ? new Date(String(parsed.transactionDate)) : new Date(),
+          transactionDate: parsed.transactionDate
+            ? new Date(String(parsed.transactionDate))
+            : new Date(),
           resultCode: String(parsed.resultCode),
           resultDesc: parsed.resultDesc,
         },
@@ -65,7 +67,7 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Notifications
+      // In-app notification
       await db.notification.create({
         data: {
           userId: payment.userId,
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // Send confirmation email
+      // Send confirmation email (non-blocking)
       sendPaymentConfirmationEmail(
         payment.application.user.email,
         payment.application.user.fullName,
@@ -83,9 +85,8 @@ export async function POST(req: NextRequest) {
         parsed.mpesaReceiptNo || 'N/A',
         payment.application.referenceNo
       ).catch(console.error)
-
     } else {
-      // Payment failed
+      // Payment failed or cancelled
       await db.payment.update({
         where: { id: payment.id },
         data: {
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' })
   } catch (error) {
     console.error('Callback error:', error)
+    // Always return 200 to M-Pesa to prevent retries
     return NextResponse.json({ ResultCode: 0, ResultDesc: 'Accepted' })
   }
 }
