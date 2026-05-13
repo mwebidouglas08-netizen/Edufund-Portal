@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { db } from '@/lib/db'
 import { requireAuth } from '@/lib/auth'
 import { apiError, apiSuccess } from '@/lib/utils'
+import { ApplicationStatus } from '@prisma/client'
 
 export async function GET(req: NextRequest) {
   const { user, error } = await requireAuth(req)
@@ -29,13 +30,14 @@ export async function GET(req: NextRequest) {
   return apiSuccess({ payment })
 }
 
-// Mock payment confirmation (only in sandbox/dev mode)
+// Mock payment confirmation (sandbox / dev only)
 export async function POST(req: NextRequest) {
-  const isMock = !process.env.MPESA_CONSUMER_KEY ||
+  const isMock =
+    !process.env.MPESA_CONSUMER_KEY ||
     process.env.MPESA_CONSUMER_KEY === 'your-mpesa-consumer-key'
 
   if (!isMock) {
-    return apiError('Mock confirmation is only available in sandbox mode', 403)
+    return apiError('Mock confirmation only available in sandbox mode', 403)
   }
 
   const { user, error } = await requireAuth(req)
@@ -62,13 +64,13 @@ export async function POST(req: NextRequest) {
 
   await db.application.update({
     where: { id: applicationId },
-    data: { status: 'SUBMITTED' },
+    data: { status: 'SUBMITTED' as ApplicationStatus },
   })
 
   await db.statusLog.create({
     data: {
       applicationId,
-      status: 'SUBMITTED',
+      status: 'SUBMITTED' as ApplicationStatus,
       changedBy: user.id,
       comment: `Submitted after mock payment (${mockReceipt})`,
     },
@@ -77,7 +79,7 @@ export async function POST(req: NextRequest) {
   await db.notification.create({
     data: {
       userId: user.id,
-      title: '🎉 Application Submitted!',
+      title: 'Application Submitted!',
       message: `Payment confirmed (Mock: ${mockReceipt}). Your application has been submitted for review.`,
       type: 'success',
     },
