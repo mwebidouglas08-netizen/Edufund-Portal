@@ -78,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   : 'text-white/60 hover:bg-white/10 hover:text-white'
               )}
             >
-              <item.icon className="w-4.5 h-4.5 flex-shrink-0" />
+              <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
               <span>{item.label}</span>
               {active && <ChevronRight className="ml-auto w-4 h-4 opacity-50" />}
             </Link>
@@ -88,14 +88,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <div className="px-3 py-4 border-t border-white/10 space-y-1">
         <Link href="/" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-white/60 hover:bg-white/10 hover:text-white transition-all">
-          <GraduationCap className="w-4.5 h-4.5" />
+          <GraduationCap className="w-[18px] h-[18px]" />
           View Public Site
         </Link>
         <button
           onClick={logout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 transition-all"
         >
-          <LogOut className="w-4.5 h-4.5" />
+          <LogOut className="w-[18px] h-[18px]" />
           Sign Out
         </button>
       </div>
