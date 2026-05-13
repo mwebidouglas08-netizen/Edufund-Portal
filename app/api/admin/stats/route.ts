@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     }),
     db.application.findMany({
       take: 10,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as const },
       include: {
         user: { select: { fullName: true, email: true } },
         payment: { select: { status: true } },
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     db.payment.findMany({
       take: 5,
       where: { status: 'SUCCESS' },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'desc' as const },
       include: {
         application: { select: { referenceNo: true } },
       },
